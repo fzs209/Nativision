@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" IgnorableNamespaces="uap mp">
+  <Identity Name="Nativision" Publisher="CN=LocalDev" Version="0.1.0.0" />
+  <mp:PhoneIdentity PhoneProductId="b8e2d5a1-4c3f-4a9e-9d2b-1f6a7c8e5d01" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
+  <Properties>
+    <DisplayName>Nativision</DisplayName>
+    <PublisherDisplayName>LocalDev</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+  <Applications>
+    <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="Nativision.App">
+      <uap:VisualElements DisplayName="Nativision" Square150x150Logo="Assets\Logo.png" Square44x44Logo="Assets\SmallLogo.png" Description="基于系统 Media Foundation 播放管线的本地杜比视界验证播放器" BackgroundColor="transparent">
+        <uap:DefaultTile Wide310x150Logo="Assets\WideLogo.png" />
+        <uap:SplashScreen Image="Assets\SplashScreen.png" />
+      </uap:VisualElements>
+      <Extensions>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="video">
+            <uap:SupportedFileTypes>
+              <uap:FileType ContentType="video/mp4">.mp4</uap:FileType>
+              <uap:FileType ContentType="video/quicktime">.mov</uap:FileType>
+              <uap:FileType>.m4v</uap:FileType>
+              <uap:FileType>.mkv</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <uap:Capability Name="videosLibrary" />
+    <uap:Capability Name="removableStorage" />
+  </Capabilities>
+</Package>

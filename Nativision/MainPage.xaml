@@ -1,0 +1,64 @@
+<Page
+    x:Class="Nativision.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid AllowDrop="True" DragOver="OnDragOver" Drop="OnDrop" KeyDown="OnKeyDown">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- The system player control. Playback itself is done entirely by the
+             Windows media pipeline (Media Foundation underneath) - this app
+             never decodes a frame itself, which is the whole point. -->
+        <MediaPlayerElement x:Name="Player" Grid.Row="0"
+                            AreTransportControlsEnabled="True"
+                            AutoPlay="False"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch">
+            <MediaPlayerElement.TransportControls>
+                <MediaTransportControls IsFullWindowButtonVisible="True"
+                                        IsZoomButtonVisible="True"
+                                        IsPlaybackRateButtonVisible="True"
+                                        IsNextTrackButtonVisible="True"
+                                        IsPreviousTrackButtonVisible="True"
+                                        IsFastForwardButtonVisible="True"
+                                        IsFastRewindButtonVisible="True" />
+            </MediaPlayerElement.TransportControls>
+        </MediaPlayerElement>
+
+        <StackPanel Grid.Row="1" Margin="12,8,12,0" Spacing="8">
+            <TextBlock x:Name="NowPlaying" Text="尚未打开文件 — 点「打开文件」或把 MP4 文件拖进来" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="打开文件…" Click="OnOpenFiles" />
+                <Button Content="打开字幕 (.srt/.vtt)…" Click="OnOpenSubtitle" />
+                <Button Content="⏮ 上一个" Click="OnPrev" />
+                <Button Content="下一个 ⏭" Click="OnNext" />
+                <ComboBox x:Name="SpeedBox" SelectionChanged="OnSpeedChanged" SelectedIndex="2" Width="110">
+                    <ComboBoxItem Content="0.5×" Tag="0.5" />
+                    <ComboBoxItem Content="0.75×" Tag="0.75" />
+                    <ComboBoxItem Content="1× 正常" Tag="1" />
+                    <ComboBoxItem Content="1.25×" Tag="1.25" />
+                    <ComboBoxItem Content="1.5×" Tag="1.5" />
+                    <ComboBoxItem Content="2×" Tag="2" />
+                </ComboBox>
+                <ToggleButton x:Name="LoopToggle" Content="🔁 循环" Checked="OnLoopChanged" Unchecked="OnLoopChanged" />
+                <Button Content="📋 复制诊断" Click="OnCopyDiag" />
+            </StackPanel>
+            <TextBlock x:Name="SubStatus" Text="字幕：无外挂字幕（内封字幕由系统控件的字幕按钮选择）" Foreground="Gray" TextWrapping="Wrap" />
+            <TextBlock x:Name="ErrorText" Foreground="Red" TextWrapping="Wrap" Visibility="Collapsed" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Margin="12,8,12,12" Spacing="4">
+            <TextBlock Text="解码 / 显示诊断（判断用）" FontWeight="SemiBold" />
+            <TextBlock x:Name="DiagText" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"
+                       Text="诊断信息会在打开文件后显示。" />
+        </StackPanel>
+    </Grid>
+</Page>
