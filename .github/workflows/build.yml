@@ -57,7 +57,6 @@ jobs:
           if ($pkgDir) {
             Copy-Item -Path (Join-Path $pkgDir.FullName "*") -Destination "$env:GITHUB_WORKSPACE\artifact" -Recurse
           }
-          Copy-Item -Path "Nativision_TemporaryKey.cer" -Destination "$env:GITHUB_WORKSPACE\artifact" -ErrorAction SilentlyContinue
           Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE\artifact" | ForEach-Object { Write-Host $_.FullName }
 
       - name: Upload artifact

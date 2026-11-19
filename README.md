@@ -24,7 +24,7 @@
 每次推送到 `main`，GitHub Actions（Windows 机器）会自动编译并打出旁加载安装包，不用本地装 Visual Studio：
 
 1. 打开本仓库的 **Actions** 页 → 最近一次 **Build Nativision** 运行 → 页面底部 **Artifacts** 下载 `Nativision-package` 并解压。
-2. 解压后先装证书：右键 `Nativision_TemporaryKey.cer`（或安装文件夹里的 `.cer`）→ 安装证书 → 本地计算机 → 受信任的人 → 完成。（这是 CI 临时自签证书，只用于让你本机能装这个包。）
+2. 解压后先装证书：右键安装文件夹里那个 `.cer` 文件 → 安装证书 → 本地计算机 → 受信任的人 → 完成。（这是 CI 临时自签证书，只用于让你本机能装这个包；文件夹里只能留这一个证书文件，多了安装脚本会报错。）
 3. 再运行文件夹里的 `Install.ps1`（右键用 PowerShell 运行），或直接双击 `.msixbundle` 安装。
 4. 前提和 Media Player 一样：开开发人员模式或允许旁加载、系统已装 HEVC 视频扩展和杜比视界扩展、Windows 设置里 HDR 已开。
 
