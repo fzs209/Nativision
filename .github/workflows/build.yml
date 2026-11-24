@@ -13,25 +13,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
-      - name: Publish WinUI 3 desktop app (unpackaged, self-contained)
+      - name: Build WinUI 3 desktop app (unpackaged, self-contained)
         shell: powershell
         run: |
-          dotnet publish Nativision\Nativision.csproj `
-            -c Release `
-            -r win-x64 `
-            --self-contained true `
-            -o "$env:GITHUB_WORKSPACE\publish"
+          msbuild Nativision\Nativision.csproj /restore `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /v:n
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Get-ChildItem "$env:GITHUB_WORKSPACE\publish" | ForEach-Object { Write-Host $_.Name }
+
+      - name: Collect output
+        shell: powershell
+        run: |
+          $out = Get-ChildItem -Path "Nativision\bin\x64\Release" -Directory -Recurse |
+            Where-Object { Test-Path (Join-Path $_.FullName "Nativision.exe") } |
+            Select-Object -First 1
+          if (-not $out) { Write-Error "Nativision.exe not found in build output"; exit 1 }
+          Write-Host "Output folder: $($out.FullName)"
+          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\artifact" | Out-Null
+          Copy-Item -Path (Join-Path $out.FullName "*") -Destination "$env:GITHUB_WORKSPACE\artifact" -Recurse
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Nativision-winui3
-          path: publish/**
+          path: artifact/**
           if-no-files-found: error
