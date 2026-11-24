@@ -21,7 +21,7 @@ namespace Nativision
         private readonly List<StorageFile> _playlist = new List<StorageFile>();
         private int _index = -1;
         private StorageFile _pendingSubtitle;
-        private DispatcherQueueTimer _timer;
+        private Microsoft.UI.Dispatching.DispatcherQueueTimer _timer;
 
         public MainWindow()
         {
