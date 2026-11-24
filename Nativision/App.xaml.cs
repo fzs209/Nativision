@@ -31,7 +31,7 @@ namespace Nativision
             CrashLog.WriteMessage("App start", "Nativision started; exception capture registered. Log file: " + CrashLog.LogPath);
         }
 
-        private void OnAppUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        private void OnAppUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
             CrashLog.Write("Application.UnhandledException", e.Exception);
             // Keep the app alive: the failure is in the log, and dying here
