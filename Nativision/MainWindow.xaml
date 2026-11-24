@@ -23,8 +23,7 @@
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Stretch">
             <MediaPlayerElement.TransportControls>
-                <MediaTransportControls IsFullWindowButtonVisible="True"
-                                        IsZoomButtonVisible="True"
+                <MediaTransportControls IsZoomButtonVisible="True"
                                         IsPlaybackRateButtonVisible="True"
                                         IsNextTrackButtonVisible="True"
                                         IsPreviousTrackButtonVisible="True"
