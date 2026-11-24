@@ -16,6 +16,27 @@ namespace Nativision
         public App()
         {
             this.InitializeComponent();
+
+            // Last-resort exception capture. A XAML stowed exception
+            // (0xc000027b in the Windows event log) otherwise kills the app
+            // with no usable detail; log the real exception to crash.log.
+            this.UnhandledException += OnAppUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+                CrashLog.Write("AppDomain.UnhandledException (process exiting)", e.ExceptionObject as Exception);
+            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, e) =>
+            {
+                CrashLog.Write("TaskScheduler.UnobservedTaskException", e.Exception);
+                e.SetObserved();
+            };
+            CrashLog.WriteMessage("App start", "Nativision started; exception capture registered. Log file: " + CrashLog.LogPath);
+        }
+
+        private void OnAppUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            CrashLog.Write("Application.UnhandledException", e.Exception);
+            // Keep the app alive: the failure is in the log, and dying here
+            // would lose the playback state along with the error detail.
+            e.Handled = true;
         }
 
         protected override void OnLaunched(LaunchActivatedEventArgs args)

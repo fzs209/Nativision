@@ -103,7 +103,9 @@ namespace Nativision
             picker.FileTypeFilter.Add(".m4v");
             picker.FileTypeFilter.Add(".mkv");
             WinRT.Interop.InitializeWithWindow.Initialize(picker, Hwnd);
-            var files = await picker.PickMultipleFilesAsync();
+            System.Collections.Generic.IReadOnlyList<StorageFile> files;
+            try { files = await picker.PickMultipleFilesAsync(); }
+            catch (Exception ex) { CrashLog.Write("OnOpenFiles", ex); return; }
             if (files == null || files.Count == 0) return;
             _playlist.Clear();
             _playlist.AddRange(files);
@@ -120,6 +122,8 @@ namespace Nativision
 
         private async void OnDrop(object sender, DragEventArgs e)
         {
+          try
+          {
             if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
             var items = await e.DataView.GetStorageItemsAsync();
             var vids = new List<StorageFile>();
@@ -143,12 +147,19 @@ namespace Nativision
             {
                 ApplySubtitleToCurrent();
             }
+          }
+          catch (Exception ex)
+          {
+            CrashLog.Write("OnDrop", ex);
+          }
         }
 
         // ---------- playback ----------
 
         private async void PlayAt(int i)
         {
+          try
+          {
             if (i < 0 || i >= _playlist.Count) return;
             _index = i;
             var file = _playlist[i];
@@ -181,6 +192,17 @@ namespace Nativision
                 ? "字幕：已挂外挂字幕 " + _pendingSubtitle.Name + "（在播放控件的字幕按钮里选它）"
                 : "字幕：无外挂字幕（内封字幕由系统控件的字幕按钮选择）";
             UpdateDiag();
+          }
+          catch (Exception ex)
+          {
+            CrashLog.Write("PlayAt", ex);
+            try
+            {
+                ErrorText.Text = "内部错误（已写入异常日志）：" + ex.Message;
+                ErrorText.Visibility = Visibility.Visible;
+            }
+            catch { }
+          }
         }
 
         private void OnTimedTextResolved(TimedTextSource sender, TimedTextSourceResolveResultEventArgs args)
@@ -250,7 +272,9 @@ namespace Nativision
             picker.FileTypeFilter.Add(".srt");
             picker.FileTypeFilter.Add(".vtt");
             WinRT.Interop.InitializeWithWindow.Initialize(picker, Hwnd);
-            var f = await picker.PickSingleFileAsync();
+            StorageFile f;
+            try { f = await picker.PickSingleFileAsync(); }
+            catch (Exception ex) { CrashLog.Write("OnOpenSubtitle", ex); return; }
             if (f == null) return;
             _pendingSubtitle = f;
             ApplySubtitleToCurrent();
@@ -258,6 +282,8 @@ namespace Nativision
 
         private void ApplySubtitleToCurrent()
         {
+          try
+          {
             if (_index < 0)
             {
                 SubStatus.Text = "字幕：已选 " + (_pendingSubtitle != null ? _pendingSubtitle.Name : "") + "，打开视频后自动挂上。";
@@ -268,12 +294,20 @@ namespace Nativision
             PlayAt(_index);
             Player.MediaPlayer.PlaybackSession.Position = pos;
             if (!wasPlaying) Player.MediaPlayer.Pause();
+          }
+          catch (Exception ex)
+          {
+            CrashLog.Write("ApplySubtitleToCurrent", ex);
+            try { SubStatus.Text = "字幕应用失败（已写入异常日志）：" + ex.Message; } catch { }
+          }
         }
 
         // ---------- keyboard ----------
 
         private void OnKeyDown(object sender, KeyRoutedEventArgs e)
         {
+          try
+          {
             var session = Player.MediaPlayer.PlaybackSession;
             if (session == null) return;
             switch (e.Key)
@@ -296,6 +330,11 @@ namespace Nativision
                     e.Handled = true;
                     break;
             }
+          }
+          catch (Exception ex)
+          {
+            CrashLog.Write("OnKeyDown", ex);
+          }
         }
 
         // ---------- diagnostics ----------
@@ -306,6 +345,7 @@ namespace Nativision
             sb.AppendLine("=== Nativision 诊断（WinUI 3 桌面版）===");
             sb.AppendLine("时间：" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             sb.AppendLine("播放方式：系统播放框架（Media Foundation 管线），本程序不自解码");
+            sb.AppendLine("异常日志文件：" + CrashLog.LogPath + "（崩溃或内部错误会写到这里）");
             sb.AppendLine();
 
             try
