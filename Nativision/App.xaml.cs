@@ -1,77 +1,37 @@
 using System;
-using Windows.ApplicationModel;
-using Windows.ApplicationModel.Activation;
-using Windows.Storage;
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Navigation;
+using System.Collections.Generic;
+using System.IO;
+using Microsoft.UI.Xaml;
 
 namespace Nativision
 {
-    sealed partial class App : Application
+    public partial class App : Application
     {
-        // File passed in when the app is launched by double-clicking a video file.
-        public static StorageFile PendingFile;
+        public static Window MainWindow;
+
+        // Files passed on the command line, e.g. Nativision.exe "D:\movie.mp4"
+        // (also what an "Open with" entry pointing at the .exe passes in).
+        public static readonly List<string> StartupFiles = new List<string>();
 
         public App()
         {
             this.InitializeComponent();
-            this.Suspending += OnSuspending;
         }
 
-        protected override void OnLaunched(LaunchActivatedEventArgs e)
+        protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
-            Frame rootFrame = Window.Current.Content as Frame;
-            if (rootFrame == null)
+            try
             {
-                rootFrame = new Frame();
-                rootFrame.NavigationFailed += OnNavigationFailed;
-                Window.Current.Content = rootFrame;
-            }
-            if (e.PrelaunchActivated == false)
-            {
-                if (rootFrame.Content == null)
+                var argv = Environment.GetCommandLineArgs();
+                for (int i = 1; i < argv.Length; i++)
                 {
-                    rootFrame.Navigate(typeof(MainPage), e.Arguments);
+                    if (File.Exists(argv[i])) StartupFiles.Add(argv[i]);
                 }
-                Window.Current.Activate();
             }
-        }
+            catch { }
 
-        protected override void OnFileActivated(FileActivatedEventArgs args)
-        {
-            if (args.Files != null && args.Files.Count > 0)
-            {
-                PendingFile = args.Files[0] as StorageFile;
-            }
-            Frame rootFrame = Window.Current.Content as Frame;
-            if (rootFrame == null)
-            {
-                rootFrame = new Frame();
-                rootFrame.NavigationFailed += OnNavigationFailed;
-                Window.Current.Content = rootFrame;
-            }
-            if (rootFrame.Content == null)
-            {
-                rootFrame.Navigate(typeof(MainPage), null);
-            }
-            else if (rootFrame.Content is MainPage page && PendingFile != null)
-            {
-                page.PlayExternalFile(PendingFile);
-                PendingFile = null;
-            }
-            Window.Current.Activate();
-        }
-
-        void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
-        {
-            throw new Exception("Failed to load Page " + e.SourcePageType.FullName);
-        }
-
-        private void OnSuspending(object sender, SuspendingEventArgs e)
-        {
-            var deferral = e.SuspendingOperation.GetDeferral();
-            deferral.Complete();
+            MainWindow = new MainWindow();
+            MainWindow.Activate();
         }
     }
 }

@@ -1,6 +1,8 @@
-# Nativision（v0.1 原型）
+# Nativision（WinUI 3 桌面版）
 
 一个从头写的本地播放器，专门验证一件事：**不用 Windows Media Player，自己写的程序走系统播放管线，能不能同样让显示器进入杜比视界模式。**
+
+> 2026-11-24 起改为 WinUI 3 桌面应用（非打包、自包含）：解压后直接双击 `Nativision.exe` 运行，不再是 UWP，不用装证书、不用旁加载 MSIX。旧 UWP 版已在真机上验证过能触发杜比视界；这个桌面版底层仍是同一个系统播放器对象，但换了应用模型之后是否同样触发，**需要重新真机验证**，不能直接沿用旧结论。
 
 ## 为什么这样写
 
@@ -11,33 +13,27 @@
 
 所以代码里没有任何自带解码器、没有任何 FFmpeg，这是有意的。
 
-## 功能（v0.1，先验证，后完善）
+## 功能
 
 - 打开多个文件排成列表，播完自动下一个；拖放打开
 - 系统播放控件自带：进度、音量、全屏、倍速按钮、音轨和字幕选择按钮
 - 额外控制：上一个/下一个、0.5×–2× 倍速、循环、外挂字幕（.srt/.vtt，在控件的字幕按钮里选）
-- 诊断面板：当前显示处于哪种高级颜色模式、峰值亮度、解码分辨率、状态、缓冲领先；一键复制全部诊断文本
-- 双击文件打开：安装后可在文件右键「打开方式」里选它（已注册 .mp4/.mov/.m4v/.mkv 关联；.mkv 系统管线大概率播不了，注册只是方便尝试）
+- 诊断面板：解码分辨率、状态、缓冲领先；一键复制全部诊断文本（显示高级颜色一项在桌面版可能读不到，读不到不影响播放判断）
+- 命令行打开：`Nativision.exe "D:\movie.mp4"`，资源管理器里对视频文件选「打开方式」指向这个 exe 也是同一条路
 
-## 直接下载构建好的安装包（GitHub Actions）
+## 直接下载构建好的程序（GitHub Actions）
 
-每次推送到 `main`，GitHub Actions（Windows 机器）会自动编译并打出旁加载安装包，不用本地装 Visual Studio：
+每次推送到 `main`，GitHub Actions（Windows 机器）会自动编译并发布，不用本地装 Visual Studio：
 
-1. 打开本仓库的 **Actions** 页 → 最近一次 **Build Nativision** 运行 → 页面底部 **Artifacts** 下载 `Nativision-package` 并解压。
-2. 解压后先装证书：右键安装文件夹里那个 `.cer` 文件 → 安装证书 → 本地计算机 → 受信任的人 → 完成。（这是 CI 临时自签证书，只用于让你本机能装这个包；文件夹里只能留这一个证书文件，多了安装脚本会报错。）
-3. 再运行文件夹里的 `Install.ps1`（右键用 PowerShell 运行），或直接双击 `.msixbundle` 安装。
-4. 前提和 Media Player 一样：开开发人员模式或允许旁加载、系统已装 HEVC 视频扩展和杜比视界扩展、Windows 设置里 HDR 已开。
+1. 打开本仓库的 **Actions** 页 → 最近一次 **Build Nativision** 运行 → 页面底部 **Artifacts** 下载 `Nativision-winui3` 并解压。
+2. 双击里面的 `Nativision.exe` 直接运行。没有安装步骤，不用装证书，不用开开发人员模式（自包含发布，Windows App Runtime 已打进文件夹，所以体积比旧版大）。
+3. 前提和 Media Player 一样：系统已装 HEVC 视频扩展和杜比视界扩展、Windows 设置里 HDR 已开。
 
 ## 本地编译运行（备选）
 
-我这边是 Linux 环境，没有 Windows 编译工具和杜比视界显示器，所以这个工程**没有经过编译和真机验证**，第一次打开如果有小报错，把报错发给我，我来改。
-
-1. 装 Visual Studio 2022，安装时勾选「通用 Windows 平台开发」工作负载。
-2. Windows 设置 → 隐私和安全性 → 开发者选项 → 打开「开发人员模式」。
-3. 解压本工程，用 Visual Studio 打开 `Nativision\Nativision.csproj`。
-   - 如果打开工程报错，备用办法：新建一个「空白应用（通用 Windows）C#」项目（最低版本选 17763、目标版本选 22621 或更高），把本工程的 `App.xaml`、`App.xaml.cs`、`MainPage.xaml`、`MainPage.xaml.cs`、`Package.appxmanifest` 和 `Assets` 文件夹覆盖进去。
-4. 顶部平台选 **x64**、配置选 **Debug**，按 F5。它会把应用部署到本机并启动。
-5. 前提和 Media Player 一样：系统已装 HEVC 视频扩展和杜比视界扩展，Windows 设置里 HDR 已开。
+1. 装 Visual Studio 2022，安装时勾选「.NET 桌面开发」和「Windows 应用开发」工作负载（WinUI 3 模板在后者里）。
+2. 用 Visual Studio 打开 `Nativision\Nativision.csproj`，平台选 **x64**、配置选 **Debug**，按 F5。
+3. 或命令行：`dotnet publish Nativision\Nativision.csproj -c Release -r win-x64 --self-contained true -o publish`
 
 ## 验证方法（和之前测 Edge 一样）
 
@@ -47,12 +43,12 @@
 
 结果分三种，后续完全不同：
 
-- **触发了** — 这条路成立。下一步就在这个程序上补功能（媒体库、记忆进度、更好的字幕等），它就是你要的“功能比 Media Player 多、又原生”的播放器。
-- **能播但只进 HDR10** — 说明系统对普通商店方式部署的应用和对自家 Media Player 的处理不一样，这条路到顶，不值得继续投入，结论和 Edge 那次一样。
+- **触发了** — 桌面版这条路成立，以后就在这个版本上补功能。
+- **能播但只进 HDR10** — 说明系统对非打包桌面应用和对自家 Media Player 的处理不一样；旧 UWP 版的验证结果仍然有效，可以退回 UWP 版继续用。
 - **播不了/报错** — 先看诊断面板和红色报错文本，把文本发我，先分清是容器/扩展问题还是管线问题。
 
 ## 已知范围
 
 - 预期能测的是 MP4/MOV 里的 Profile 5 / 8，和 Media Player 的范围一致。
 - MKV、Profile 7 双层、TrueHD/DTS 无损音轨：系统管线本身就不擅长，预计和 Media Player 一样受限，不要拿这些文件的结果否定整条路线。
-- 系统没有给普通应用提供“已进入杜比视界”的读数接口，诊断面板只能报显示处于哪种高级颜色模式，最终判断永远以显示器菜单为准。
+- 系统没有给普通应用提供“已进入杜比视界”的读数接口，最终判断永远以显示器菜单为准。

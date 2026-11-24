@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics.Display;
 using Windows.Media.Core;
@@ -9,22 +13,20 @@ using Windows.Media.Playback;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.System;
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Input;
 
 namespace Nativision
 {
-    public sealed partial class MainPage : Page
+    public sealed partial class MainWindow : Window
     {
         private readonly List<StorageFile> _playlist = new List<StorageFile>();
         private int _index = -1;
         private StorageFile _pendingSubtitle;
-        private DispatcherTimer _timer;
+        private DispatcherQueueTimer _timer;
 
-        public MainPage()
+        public MainWindow()
         {
             this.InitializeComponent();
+            this.Title = "Nativision";
 
             var mp = Player.MediaPlayer;
             mp.MediaEnded += OnMediaEnded;
@@ -35,29 +37,62 @@ namespace Nativision
                 mp.PlaybackSession.PlaybackStateChanged += (s, e) => RunOnUi(UpdateDiag);
             }
 
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _timer = DispatcherQueue.CreateTimer();
+            _timer.Interval = TimeSpan.FromMilliseconds(500);
+            _timer.IsRepeating = true;
             _timer.Tick += (s, e) => UpdateDiag();
             _timer.Start();
 
-            if (App.PendingFile != null)
+            this.Closed += (s, e) =>
             {
-                var f = App.PendingFile;
-                App.PendingFile = null;
-                _playlist.Add(f);
-                PlayAt(0);
+                try { _timer.Stop(); } catch { }
+                try { Player.MediaPlayer.Dispose(); } catch { }
+            };
+
+            if (App.StartupFiles.Count > 0)
+            {
+                LoadStartupFiles();
             }
             UpdateDiag();
         }
 
-        public void PlayExternalFile(StorageFile file)
+        private async void LoadStartupFiles()
         {
-            if (file == null) return;
-            _playlist.Clear();
-            _playlist.Add(file);
-            PlayAt(0);
+            var vids = new List<StorageFile>();
+            foreach (var path in App.StartupFiles)
+            {
+                try
+                {
+                    var f = await StorageFile.GetFileFromPathAsync(path);
+                    var ext = f.FileType.ToLowerInvariant();
+                    if (ext == ".srt" || ext == ".vtt") _pendingSubtitle = f;
+                    else vids.Add(f);
+                }
+                catch { }
+            }
+            if (vids.Count > 0)
+            {
+                _playlist.Clear();
+                _playlist.AddRange(vids);
+                PlayAt(0);
+            }
+        }
+
+        public async void PlayExternalPath(string path)
+        {
+            try
+            {
+                var f = await StorageFile.GetFileFromPathAsync(path);
+                _playlist.Clear();
+                _playlist.Add(f);
+                PlayAt(0);
+            }
+            catch { }
         }
 
         // ---------- opening files ----------
+
+        private IntPtr Hwnd => WinRT.Interop.WindowNative.GetWindowHandle(this);
 
         private async void OnOpenFiles(object sender, RoutedEventArgs e)
         {
@@ -67,6 +102,7 @@ namespace Nativision
             picker.FileTypeFilter.Add(".mov");
             picker.FileTypeFilter.Add(".m4v");
             picker.FileTypeFilter.Add(".mkv");
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, Hwnd);
             var files = await picker.PickMultipleFilesAsync();
             if (files == null || files.Count == 0) return;
             _playlist.Clear();
@@ -149,10 +185,6 @@ namespace Nativision
 
         private void OnTimedTextResolved(TimedTextSource sender, TimedTextSourceResolveResultEventArgs args)
         {
-            // The external track appears in the transport controls' caption list
-            // once resolved; the viewer selects it there. Auto-selecting it from
-            // here is not exposed when the source is assigned directly, so this
-            // handler only surfaces failures.
             if (args.Error != null)
             {
                 RunOnUi(() => { SubStatus.Text = "字幕解析失败：" + args.Error.ExtendedError.Message; });
@@ -217,6 +249,7 @@ namespace Nativision
             picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
             picker.FileTypeFilter.Add(".srt");
             picker.FileTypeFilter.Add(".vtt");
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, Hwnd);
             var f = await picker.PickSingleFileAsync();
             if (f == null) return;
             _pendingSubtitle = f;
@@ -230,8 +263,6 @@ namespace Nativision
                 SubStatus.Text = "字幕：已选 " + (_pendingSubtitle != null ? _pendingSubtitle.Name : "") + "，打开视频后自动挂上。";
                 return;
             }
-            // Re-open the current file so the new timed-text source is attached,
-            // keeping the position.
             var pos = Player.MediaPlayer.PlaybackSession.Position;
             var wasPlaying = Player.MediaPlayer.PlaybackSession.PlaybackState == MediaPlaybackState.Playing;
             PlayAt(_index);
@@ -272,12 +303,11 @@ namespace Nativision
         private string BuildDiagText()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("=== Nativision诊断 ===");
+            sb.AppendLine("=== Nativision 诊断（WinUI 3 桌面版）===");
             sb.AppendLine("时间：" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             sb.AppendLine("播放方式：系统播放框架（Media Foundation 管线），本程序不自解码");
             sb.AppendLine();
 
-            // Display / advanced color
             try
             {
                 var di = DisplayInformation.GetForCurrentView();
@@ -293,11 +323,10 @@ namespace Nativision
             }
             catch (Exception ex)
             {
-                sb.AppendLine("[显示] 读取失败：" + ex.Message);
+                sb.AppendLine("[显示] 读取失败（桌面版此接口可能不可用，不影响播放判断）：" + ex.Message);
             }
             sb.AppendLine();
 
-            // Playback session
             try
             {
                 var mp = Player.MediaPlayer;
@@ -342,9 +371,17 @@ namespace Nativision
 
         private void OnCopyDiag(object sender, RoutedEventArgs e)
         {
-            var pkg = new DataPackage();
-            pkg.SetText(BuildDiagText());
-            Clipboard.SetContent(pkg);
+            try
+            {
+                var pkg = new DataPackage();
+                pkg.SetText(BuildDiagText());
+                Clipboard.SetContent(pkg);
+            }
+            catch (Exception ex)
+            {
+                ErrorText.Text = "复制诊断失败：" + ex.Message;
+                ErrorText.Visibility = Visibility.Visible;
+            }
         }
 
         // ---------- helpers ----------
@@ -357,11 +394,8 @@ namespace Nativision
 
         private void RunOnUi(Action action)
         {
-            if (Dispatcher.HasThreadAccess) action();
-            else
-            {
-                var _ = Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () => action());
-            }
+            if (DispatcherQueue.HasThreadAccess) action();
+            else DispatcherQueue.TryEnqueue(() => action());
         }
     }
 }
